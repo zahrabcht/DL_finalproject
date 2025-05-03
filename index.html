@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emotion Detector AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6c5ce7;
+            --secondary: #a29bfe;
+            --dark: #2d3436;
+            --light: #f5f6fa;
+            --success: #00b894;
+            --danger: #d63031;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--dark);
+        }
+        
+        .container {
+            background-color: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            max-width: 800px;
+            padding: 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 10px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        
+        p.subtitle {
+            color: #636e72;
+            margin-bottom: 30px;
+        }
+        
+        .upload-area {
+            border: 2px dashed var(--secondary);
+            border-radius: 15px;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .upload-area:hover {
+            background-color: rgba(162, 155, 254, 0.05);
+            border-color: var(--primary);
+        }
+        
+        .upload-area i {
+            font-size: 50px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+        
+        .upload-area p {
+            color: #636e72;
+        }
+        
+        #file-input {
+            display: none;
+        }
+        
+        #preview {
+            max-width: 200px;
+            max-height: 200px;
+            border-radius: 10px;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        button {
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3);
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.4);
+        }
+        
+        button:disabled {
+            background: #dfe6e9;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .result-container {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .emotion-display {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        
+        .confidence-meter {
+            height: 10px;
+            background-color: #dfe6e9;
+            border-radius: 5px;
+            margin: 20px 0;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 1s ease;
+        }
+        
+        .probabilities {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .probability-item {
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            min-width: 100px;
+        }
+        
+        .probability-item .label {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .probability-item .value {
+            color: var(--primary);
+            font-weight: 600;
+        }
+        
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto;
+            border: 4px solid rgba(108, 92, 231, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .emoji {
+            font-size: 60px;
+            margin: 20px 0;
+        }
+        
+        .error {
+            color: var(--danger);
+            margin: 10px 0;
+            display: none;
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Emotion Detector AI</h1>
+        <p class="subtitle">Upload a face image and let our AI detect the emotion</p>
+        
+        <div class="upload-area" id="upload-area">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p>Drag & drop your image here or click to browse</p>
+            <input type="file" id="file-input" accept="image/*">
+        </div>
+        
+        <img id="preview" alt="Preview">
+        
+        <div class="error" id="error-message"></div>
+        
+        <button id="analyze-btn" disabled>
+            <i class="fas fa-brain"></i> Analyze Emotion
+        </button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing emotion...</p>
+        </div>
+        
+        <div class="result-container" id="result-container">
+            <div class="emoji" id="emotion-emoji"></div>
+            <div class="emotion-display" id="emotion-text"></div>
+            <p>Confidence level:</p>
+            <div class="confidence-meter">
+                <div class="confidence-fill" id="confidence-meter-fill"></div>
+            </div>
+            <p>Detailed probabilities:</p>
+            <div class="probabilities" id="probabilities-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const loading = document.getElementById('loading');
+        const resultContainer = document.getElementById('result-container');
+        const emotionText = document.getElementById('emotion-text');
+        const confidenceMeterFill = document.getElementById('confidence-meter-fill');
+        const probabilitiesContainer = document.getElementById('probabilities-container');
+        const errorMessage = document.getElementById('error-message');
+        const emotionEmoji = document.getElementById('emotion-emoji');
+        
+        // Emotion to emoji mapping
+        const emotionEmojis = {
+            'angry': '😠',
+            'disgust': '🤢',
+            'fear': '😨',
+            'happy': '😊',
+            'neutral': '😐',
+            'sad': '😢',
+            'surprise': '😲'
+        };
+        
+        // Emotion to color mapping
+        const emotionColors = {
+            'angry': '#e74c3c',
+            'disgust': '#27ae60',
+            'fear': '#9b59b6',
+            'happy': '#f1c40f',
+            'neutral': '#95a5a6',
+            'sad': '#3498db',
+            'surprise': '#e67e22'
+        };
+        
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = 'rgba(162, 155, 254, 0.1)';
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '';
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '';
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelect();
+            }
+        });
+        
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            // Check if file is an image
+            if (!file.type.match('image.*')) {
+                showError('Please select an image file');
+                return;
+            }
+            
+            hideError();
+            
+            // Display preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+                analyzeBtn.disabled = false;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        analyzeBtn.addEventListener('click', () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+            
+            // Show loading state
+            loading.style.display = 'block';
+            resultContainer.style.display = 'none';
+            analyzeBtn.disabled = true;
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            // Send to server
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+                displayResults(data);
+            })
+            .catch(error => {
+                showError(error.message || 'An error occurred during analysis');
+            })
+            .finally(() => {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            });
+        });
+        
+        function displayResults(data) {
+            // Set emotion text and emoji
+            const emotion = data.emotion;
+            emotionText.textContent = emotion.charAt(0).toUpperCase() + emotion.slice(1);
+            emotionEmoji.textContent = emotionEmojis[emotion] || '❓';
+            
+            // Set confidence meter
+            const confidence = data.confidence * 100;
+            confidenceMeterFill.style.width = `${confidence}%`;
+            confidenceMeterFill.style.background = emotionColors[emotion] || 
+                'linear-gradient(90deg, var(--primary), var(--secondary))';
+            
+            // Create probability items
+            probabilitiesContainer.innerHTML = '';
+            for (const [emotion, prob] of Object.entries(data.probabilities)) {
+                const item = document.createElement('div');
+                item.className = 'probability-item';
+                item.innerHTML = `
+                    <div class="label">${emotion.charAt(0).toUpperCase() + emotion.slice(1)}</div>
+                    <div class="value">${(prob * 100).toFixed(1)}%</div>
+                `;
+                probabilitiesContainer.appendChild(item);
+            }
+            
+            // Show results
+            resultContainer.style.display = 'block';
+            
+            // Smooth scroll to results
+            resultContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            preview.style.display = 'none';
+            analyzeBtn.disabled = true;
+            resultContainer.style.display = 'none';
+        }
+        
+        function hideError() {
+            errorMessage.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
